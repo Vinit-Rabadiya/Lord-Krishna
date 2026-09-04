@@ -18,9 +18,9 @@ kernel = np.ones((3, 3), np.uint8)
 
 # Edge detection at full original resolution
 b, g, r = cv2.split(image)
-edges_b = cv2.Canny(cv2.GaussianBlur(b, (9, 9), 0), 50, 150)
-edges_g = cv2.Canny(cv2.GaussianBlur(g, (9, 9), 0), 50, 150)
-edges_r = cv2.Canny(cv2.GaussianBlur(r, (9, 9), 0), 50, 150)
+edges_b = cv2.Canny(cv2.GaussianBlur(b, (3, 3), 0), 20, 60)
+edges_g = cv2.Canny(cv2.GaussianBlur(g, (3, 3), 0), 20, 60)
+edges_r = cv2.Canny(cv2.GaussianBlur(r, (3, 3), 0), 20, 60)
 edges = cv2.bitwise_or(edges_b, cv2.bitwise_or(edges_g, edges_r))
 edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
 
