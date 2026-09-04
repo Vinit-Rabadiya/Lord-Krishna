@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 import random
 
-IMAGE_PATH = "images/birth.jpg"
-DISPLAY_HEIGHT = 750
+IMAGE_PATH = "images/1.png"
+DISPLAY_WIDTH = 1000
 POINTS_PER_FRAME = 30
 
 image = cv2.imread(IMAGE_PATH)
@@ -13,40 +13,45 @@ if image is None:
     exit()
 
 height, width, channels = image.shape
-scale = DISPLAY_HEIGHT / height
-display_width = int(width * scale)
 
-gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 kernel = np.ones((3, 3), np.uint8)
 
-blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-edges = cv2.Canny(blurred, 30, 100)
+# Edge detection at full original resolution
+b, g, r = cv2.split(image)
+edges_b = cv2.Canny(cv2.GaussianBlur(b, (9, 9), 0), 50, 150)
+edges_g = cv2.Canny(cv2.GaussianBlur(g, (9, 9), 0), 50, 150)
+edges_r = cv2.Canny(cv2.GaussianBlur(r, (9, 9), 0), 50, 150)
+edges = cv2.bitwise_or(edges_b, cv2.bitwise_or(edges_g, edges_r))
 edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
 
 colored_edges = np.zeros_like(image)
 colored_edges[edges > 0] = image[edges > 0]
 
-colored_edges_small = cv2.resize(colored_edges, (display_width, DISPLAY_HEIGHT))
-edges_small = cv2.resize(edges, (display_width, DISPLAY_HEIGHT))
+# Find contours at full resolution
+contours, _ = cv2.findContours(edges, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
 
-contours, _ = cv2.findContours(edges_small, cv2.RETR_LIST, cv2.CHAIN_APPROX_NONE)
+# Only resize for display — quality stays the same regardless of DISPLAY_WIDTH
+scale = DISPLAY_WIDTH / width
+display_height = int(height * scale)
 
-small_height, small_width = edges_small.shape
-canvas = np.zeros((small_height, small_width, 3), dtype=np.uint8)
+colored_edges_small = cv2.resize(colored_edges, (DISPLAY_WIDTH, display_height))
+edges_small = cv2.resize(edges, (DISPLAY_WIDTH, display_height))
 
-# Convert to (y, x) point lists and shuffle so drawing order is random
+# Scale contour points to display size
 contour_points = []
 for contour in contours:
-    pts = [(pt[0][1], pt[0][0]) for pt in contour]
+    pts = [(int(pt[0][1] * scale), int(pt[0][0] * scale)) for pt in contour]
     contour_points.append(pts)
 
 random.shuffle(contour_points)
+
+small_height, small_width = edges_small.shape
+canvas = np.zeros((small_height, small_width, 3), dtype=np.uint8)
 
 cv2.namedWindow("Drawing", cv2.WINDOW_AUTOSIZE)
 cv2.imshow("Drawing", canvas)
 cv2.waitKey(1)
 
-# Draw one contour at a time, POINTS_PER_FRAME points per screen refresh
 for contour in contour_points:
     for i in range(0, len(contour), POINTS_PER_FRAME):
         batch = contour[i:i + POINTS_PER_FRAME]
